@@ -112,12 +112,14 @@ function exportData() {
   const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' })
   const url = URL.createObjectURL(blob)
   const now = new Date()
-  const stamp = String(now.getFullYear())
-    + String(now.getMonth() + 1).padStart(2, '0')
-    + String(now.getDate()).padStart(2, '0')
+  const pad = (n) => String(n).padStart(2, '0')
+  const stamp = String(now.getFullYear()) + pad(now.getMonth() + 1) + pad(now.getDate())
+    + pad(now.getHours()) + pad(now.getMinutes()) + pad(now.getSeconds())
+  // 同一秒内多次导出也不会重名
+  const rand = Math.random().toString(36).slice(2, 6).padEnd(4, '0')
   const link = document.createElement('a')
   link.href = url
-  link.download = 'WayMarkTag-备份-' + stamp + '.json'
+  link.download = 'WayMarkTag-' + stamp + '-' + rand + '.json'
   document.body.appendChild(link)
   link.click()
   link.remove()

@@ -54,7 +54,7 @@
 - 支持 `prefers-reduced-motion` 降级，键盘可达、焦点可见。
 
 ### 导入 / 导出
-- 设置 → 导出备份：下载 JSON 文件，文件名形如 `WayMarkTag-备份-<日期>.json`。
+- 设置 → 导出备份：下载 JSON 文件，文件名形如 `WayMarkTag-<YYYYMMDDhhmmss>-<4位随机>.json`（例：`WayMarkTag-20261108001118-a3k9.json`）。
 - 设置 → 导入备份：读取 JSON 后校验、二次确认，成功则整体替换当前数据。
 - 数据同时写入 `localStorage`，刷新不丢。
 
