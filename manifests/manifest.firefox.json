@@ -1,0 +1,23 @@
+{
+  "manifest_version": 3,
+  "name": "起始页",
+  "short_name": "起始页",
+  "version": "1.0.0",
+  "description": "极简新标签页：时钟、多引擎搜索、可翻页的常用网站面板，数据只存本机。",
+  "chrome_url_overrides": {
+    "newtab": "index.html"
+  },
+  "permissions": ["storage"],
+  "icons": {
+    "16": "icons/16.png",
+    "32": "icons/32.png",
+    "48": "icons/48.png",
+    "128": "icons/128.png"
+  },
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "way-mark-tag@local",
+      "strict_min_version": "109.0"
+    }
+  }
+}

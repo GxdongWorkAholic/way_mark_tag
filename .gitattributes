@@ -1,0 +1,8 @@
+* text=auto eol=lf
+
+# 二进制产物，不做文本 diff
+*.png binary
+*.zip binary
+*.crx binary
+*.xpi binary
+*.pem binary

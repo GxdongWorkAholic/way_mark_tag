@@ -1,0 +1,51 @@
+<!doctype html>
+<meta charset="utf-8">
+<style>html,body{margin:0;background:#888} iframe{width:1200px;height:900px;border:0;display:block}</style>
+<iframe id="f"></iframe>
+<script>
+const p = new URLSearchParams(location.search)
+const f = document.getElementById('f')
+f.src = p.get('src') || './index.html'
+const scene = p.get('scene') || 'main'
+
+function wait(ms) { return new Promise((r) => setTimeout(r, ms)) }
+
+f.addEventListener('load', async () => {
+  await wait(700)
+  const W = f.contentWindow
+  const D = f.contentDocument
+  const q = (s) => D.querySelector(s)
+  if (scene === 'settings') {
+    q('#settingsBtn').click()
+  } else if (scene === 'site') {
+    const vp = q('#boardViewport')
+    const r = vp.getBoundingClientRect()
+    vp.dispatchEvent(new W.MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: r.left + 20, clientY: r.bottom - 20 }))
+    await wait(150)
+    D.querySelectorAll('#ctxMenu .ctx-item')[0].click()
+    await wait(250)
+    q('#siteName').value = '示例站点'
+    q('#siteName').dispatchEvent(new W.Event('input', { bubbles: true }))
+    q('#addLinkBtn').click()
+    await wait(120)
+    const urlInputs = D.querySelectorAll('.link-row .link-url')
+    urlInputs[urlInputs.length - 1].value = 'example.com'
+    urlInputs[urlInputs.length - 1].dispatchEvent(new W.Event('input', { bubbles: true }))
+  } else if (scene === 'darkonly') {
+    q('#themeToggle').click()
+    await wait(300)
+  } else if (scene === 'dark') {
+    q('#themeToggle').click()
+    await wait(150)
+    q('#settingsBtn').click()
+  } else if (scene === 'move') {
+    const tile = D.querySelectorAll('.tile')[0]
+    const r = tile.getBoundingClientRect()
+    tile.dispatchEvent(new W.MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: r.left + 10, clientY: r.top + 10 }))
+    await wait(150)
+    D.querySelectorAll('#ctxMenu .ctx-item')[2].click()
+    await wait(250)
+  }
+  document.title = 'ready'
+})
+</script>

@@ -1,0 +1,231 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>functional probe</title>
+<style>html,body{margin:0;font:12px/1.5 monospace} iframe{width:1200px;height:900px;border:0;display:block}</style>
+<pre id="out">RUNNING</pre>
+<script>
+const results = []
+function check(name, cond, extra) {
+  results.push({ name, ok: !!cond, extra: extra === undefined ? null : extra })
+}
+
+function wait(ms) { return new Promise((r) => setTimeout(r, ms)) }
+
+function press(el, type, x, y, win) {
+  return el.dispatchEvent(new (win.PointerEvent)(type, {
+    bubbles: true, cancelable: true, clientX: x, clientY: y,
+    pointerId: 1, pointerType: 'mouse', button: 0, buttons: 1, isPrimary: true
+  }))
+}
+
+async function run() {
+  try { localStorage.clear() } catch (e) {}
+  const useExt = new URLSearchParams(location.search).get('ext') === '1'
+
+  try {
+  const frame = document.createElement('iframe')
+  frame.id = 'target'
+  frame.src = useExt ? './__ext.html' : './index.html'
+  document.body.insertBefore(frame, document.getElementById('out'))
+  await new Promise((resolve) => { frame.onload = resolve })
+  await wait(600)
+
+  const W = frame.contentWindow
+  const D = frame.contentDocument
+  const q = (sel) => D.querySelector(sel)
+  const qa = (sel) => Array.from(D.querySelectorAll(sel))
+  const labels = () => qa('.tile-label').map((el) => el.textContent.trim())
+  const stored = () => JSON.parse(W.localStorage.getItem('qingning-lite-start.v1') || 'null')
+
+  // 阻止打开新窗口干扰测试
+  const opened = []
+  W.open = (url) => { opened.push(url); return null }
+  const openedUrls = () => (W.__openedTabs && W.__openedTabs.length ? W.__openedTabs : opened)
+
+  /* 1. 初始渲染 */
+  check('初始 8 个图块', qa('.tile').length === 8, qa('.tile').length)
+  check('分页标签', qa('.page-tab').map((t) => t.textContent).join('|') === '日常|工作')
+  check('问候语非空', q('#greeting').textContent.length > 0, q('#greeting').textContent)
+  check('时钟为 HH:MM', /^\d{2}:\d{2}$/.test(q('#clockTime').textContent), q('#clockTime').textContent)
+  check('深色切换按钮存在', !!q('#themeToggle'))
+
+  const sel = (el) => (el ? W.getComputedStyle(el).userSelect : 'missing')
+  check('主页文本不可选中', sel(q('.today')) === 'none', sel(q('.today')))
+  check('图块文字不可选中', sel(q('.tile-label')) === 'none', sel(q('.tile-label')))
+  check('设置文本不可选中', sel(q('#settingsDialog h3')) === 'none', sel(q('#settingsDialog h3')))
+  check('输入框仍可选中', sel(q('.search-input')) === 'text', sel(q('.search-input')))
+
+  /* 2. 分页切换 */
+  qa('.page-tab')[1].click()
+  await wait(80)
+  check('切到「工作」4 个图块', qa('.tile').length === 4, labels())
+  check('面包屑隐藏', q('#crumb').offsetParent === null || W.getComputedStyle(q('#crumb')).display === 'none')
+
+  /* 3. 进入文件夹 */
+  qa('.tile')[0].click()
+  await wait(80)
+  check('进入开发文件夹', qa('.tile').length === 3, labels())
+  check('面包屑可见', W.getComputedStyle(q('#crumb')).display !== 'none')
+  check('面包屑含返回', q('#crumb').textContent.includes('返回'), q('#crumb').textContent.trim())
+
+  /* 4. 返回 */
+  q('.crumb-back').click()
+  await wait(80)
+  check('返回后 4 个图块', qa('.tile').length === 4, labels())
+
+  /* 5. 右键菜单 */
+  const tile = qa('.tile')[1]
+  const tr = tile.getBoundingClientRect()
+  tile.dispatchEvent(new W.MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: tr.left + 10, clientY: tr.top + 10 }))
+  await wait(80)
+  const ctx = q('#ctxMenu')
+  check('右键菜单可见', W.getComputedStyle(ctx).display !== 'none')
+  check('右键菜单项', qa('#ctxMenu .ctx-item').map((b) => b.textContent).join('|') === '打开|编辑|移动到…|复制到…|删除',
+    qa('#ctxMenu .ctx-item').map((b) => b.textContent).join('|'))
+
+  D.dispatchEvent(new W.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))
+  await wait(60)
+  check('Escape 关闭右键菜单', W.getComputedStyle(ctx).display === 'none')
+
+  /* 6. 回到日常，点 DeepSeek（多链接） */
+  qa('.page-tab')[0].click()
+  await wait(80)
+  qa('.tile')[0].click()
+  await wait(80)
+  check('多链接菜单可见', W.getComputedStyle(q('#linkMenu')).display !== 'none')
+  check('多链接菜单 2 项', qa('#linkMenu .link-menu-item').length === 2)
+  qa('#linkMenu .link-menu-item')[0].click()
+  await wait(60)
+  const urls = openedUrls()
+  check('点击链接触发打开', urls.length === 1 && urls[0] === 'https://chat.deepseek.com', urls)
+  check('菜单已关闭', W.getComputedStyle(q('#linkMenu')).display === 'none')
+
+  /* 7. 空白处右键 -> 新增网站 */
+  const vp = q('#boardViewport')
+  const vr = vp.getBoundingClientRect()
+  vp.dispatchEvent(new W.MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: vr.left + 12, clientY: vr.bottom - 12 }))
+  await wait(80)
+  check('空白右键菜单', qa('#ctxMenu .ctx-item').map((b) => b.textContent).join('|') === '新增网站|新增文件夹',
+    qa('#ctxMenu .ctx-item').map((b) => b.textContent).join('|'))
+  qa('#ctxMenu .ctx-item')[0].click()
+  await wait(120)
+  check('新增网站对话框打开', q('#siteDialog').open === true)
+
+  /* 8. 表单校验 + 提交 */
+  q('#siteDialog').querySelector('form').dispatchEvent(new W.Event('submit', { bubbles: true, cancelable: true }))
+  await wait(80)
+  check('空名称报错', q('#siteNameError').textContent.includes('请输入名称'), q('#siteNameError').textContent)
+
+  const nameInput = q('#siteName')
+  nameInput.value = '测试站点'
+  nameInput.dispatchEvent(new W.Event('input', { bubbles: true }))
+  const urlInput = q('.link-row .link-url')
+  urlInput.value = 'example.org'
+  urlInput.dispatchEvent(new W.Event('input', { bubbles: true }))
+  q('#siteDialog').querySelector('form').dispatchEvent(new W.Event('submit', { bubbles: true, cancelable: true }))
+  await wait(150)
+  check('网站已新增', qa('.tile').length === 9, qa('.tile').length)
+  check('名称已保存', labels().includes('测试站点'), labels())
+  const s1 = stored()
+  check('已写入 localStorage', s1 && s1.pages[0].items.length === 9, s1 && s1.pages[0].items.length)
+  check('网址规范化', s1 && s1.pages[0].items[8].links[0].url === 'https://example.org/', s1 && s1.pages[0].items[8].links[0].url)
+  check('新图块获得焦点', D.activeElement && D.activeElement.dataset.nodeId === s1.pages[0].items[8].id,
+    D.activeElement && D.activeElement.className)
+
+  /* 9. 主题切换 */
+  q('#themeToggle').click()
+  await wait(80)
+  check('切到深色', D.documentElement.dataset.theme === 'dark', D.documentElement.dataset.theme)
+  check('主题已持久化', stored().theme === 'dark', stored().theme)
+  q('#themeToggle').click()
+  await wait(60)
+
+  /* 10. 移动到… */
+  const moveTile = qa('.tile')[2]
+  const mr = moveTile.getBoundingClientRect()
+  moveTile.dispatchEvent(new W.MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: mr.left + 10, clientY: mr.top + 10 }))
+  await wait(80)
+  qa('#ctxMenu .ctx-item')[2].click()
+  await wait(120)
+  check('移动对话框打开', q('#moveDialog').open === true)
+  check('移动树含两个分页根', qa('#moveDialog > .dlg-body .tree-node').length >= 2,
+    qa('#moveDialog > .dlg-body .tree-node').length)
+  const pageRows = qa('#moveDialog .tree-pick').filter((b) => b.parentElement.querySelector('.tree-toggle.is-empty') && !b.closest('.tree-children'))
+  pageRows[pageRows.length - 1].click()
+  await wait(60)
+  const confirmBtn = qa('#moveDialog .dlg-foot .btn')[1]
+  check('选中后确认可用', confirmBtn.disabled === false)
+  confirmBtn.click()
+  await wait(150)
+  check('移动对话框已关闭', q('#moveDialog').open === false)
+  const s2 = stored()
+  check('移动到「工作」', s2.pages[1].items.some((it) => it.name === '知乎'), s2.pages[1].items.map((i) => i.name))
+  check('「日常」少了知乎', !s2.pages[0].items.some((it) => it.name === '知乎'), s2.pages[0].items.length)
+
+  /* 11. 拖拽排序 */
+  await wait(500)
+  const before = labels()
+  const dragEl = qa('.tile')[2]      // 哔哩哔哩（原第 3 个）
+  const targetEl = qa('.tile')[0]    // 拖到第一个前面
+  const dr = dragEl.getBoundingClientRect()
+  const tr2 = targetEl.getBoundingClientRect()
+  const sx = dr.left + dr.width / 2
+  const sy = dr.top + dr.height / 2
+  const tx = tr2.left + 6
+  const ty = tr2.top + tr2.height / 2
+
+  press(dragEl, 'pointerdown', sx, sy, W)
+  await wait(30)
+  press(W, 'pointermove', sx + 20, sy, W)
+  await wait(30)
+  press(W, 'pointermove', tx, ty, W)
+  await wait(60)
+  press(W, 'pointerup', tx, ty, W)
+  await wait(200)
+
+  const after = labels()
+  check('拖拽后顺序变化', after[0] === before[2], { before, after })
+  const s3 = stored()
+  check('顺序已持久化', s3.pages[0].items[0].name === before[2], s3.pages[0].items.map((i) => i.name))
+
+  /* 12. 设置面板 */
+  q('#settingsBtn').click()
+  await wait(120)
+  check('设置面板打开', q('#settingsDialog').open === true)
+  check('分页管理 2 行', qa('#pageManage .pm-row').length === 2, qa('#pageManage .pm-row').length)
+  check('删除按钮可用', q('#pageManage .pm-del').disabled === false)
+  q('#settingsDialog .dlg-close').click()
+  await wait(80)
+  check('设置面板关闭', q('#settingsDialog').open === false)
+
+  /* 13. 深色主题下的截图留档 */
+  q('#themeToggle').click()
+  await wait(100)
+
+  /* 14. 扩展环境：清掉 localStorage 后重载，数据必须来自 chrome.storage.local */
+  if (useExt) {
+    const expected = { count: qa('.tile').length, labels: labels() }
+    try { W.localStorage.removeItem('qingning-lite-start.v1') } catch (e) {}
+    await new Promise((resolve) => {
+      frame.onload = resolve
+      frame.contentWindow.location.reload()
+    })
+    await wait(700)
+    const D2 = frame.contentDocument
+    const labels2 = Array.from(D2.querySelectorAll('.tile-label')).map((el) => el.textContent.trim())
+    check('扩展：chrome.storage 持久化后可恢复', D2.querySelectorAll('.tile').length === expected.count,
+      { expected: expected.count, actual: D2.querySelectorAll('.tile').length })
+    check('扩展：恢复后内容一致', labels2.join('|') === expected.labels.join('|'), { expected: expected.labels, actual: labels2 })
+    check('扩展：深色主题已恢复', D2.documentElement.dataset.theme === 'dark', D2.documentElement.dataset.theme)
+  }
+} catch (err) {
+  results.push({ name: 'EXCEPTION', ok: false, extra: String(err && err.stack || err) })
+}
+
+const failed = results.filter((r) => !r.ok)
+document.getElementById('out').textContent =
+  'RESULT=' + JSON.stringify({ total: results.length, failed: failed.length, results }) + '=ENDRESULT'
+}
+
+run()
+</script>
