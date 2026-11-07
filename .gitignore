@@ -1,12 +1,11 @@
 # 依赖
 node_modules/
 
-# 构建中间产物（npm run build 可重建）
-output/dist/
+# 构建与打包产物：本地用 npm run build / npm run package 生成，不入库
+output/
 
 # 打包私钥：绝对不能提交
 *.pem
-output/release/*.pem
 
 # 本地调试产物
 .shots/
