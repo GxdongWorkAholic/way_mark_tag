@@ -3,7 +3,7 @@
  *
  *   npm run package
  *
- * Chrome 的 .crx 由本机 Chrome 的 --pack-extension 生成（私钥保存在 output/release/way-mark-tag.pem，
+ * Chrome 的 .crx 由本机 Chrome 的 --pack-extension 生成（私钥保存在 output/release/waymarktag.pem，
  * 复用同一个私钥可以保证扩展 ID 稳定）。机器上找不到 Chrome 时只出 .zip。
  * .xpi 就是 ZIP，换个后缀而已，不引入任何第三方依赖。
  */
@@ -127,17 +127,17 @@ for (const dir of [distChrome, distFirefox]) {
 
 fs.mkdirSync(release, { recursive: true })
 
-const chromeZip = path.join(release, `way-mark-tag-chrome-${version}.zip`)
+const chromeZip = path.join(release, `waymarktag-chrome-${version}.zip`)
 fs.writeFileSync(chromeZip, zipDirectory(distChrome))
 console.log('zip   ' + path.relative(root, chromeZip))
 
-const firefoxXpi = path.join(release, `way-mark-tag-firefox-${version}.xpi`)
+const firefoxXpi = path.join(release, `waymarktag-firefox-${version}.xpi`)
 fs.writeFileSync(firefoxXpi, zipDirectory(distFirefox))
 console.log('xpi   ' + path.relative(root, firefoxXpi))
 
 // Chrome 有 --pack-extension 才能出 .crx
 if (fs.existsSync(CHROME)) {
-  const keyFile = path.join(release, 'way-mark-tag.pem')
+  const keyFile = path.join(release, 'waymarktag.pem')
   const hasKey = fs.existsSync(keyFile)
   const args = [`--pack-extension=${distChrome}`]
   if (hasKey) args.push(`--pack-extension-key=${keyFile}`)
@@ -147,7 +147,7 @@ if (fs.existsSync(CHROME)) {
   const producedPem = distChrome + '.pem'
 
   if (result.status === 0 && fs.existsSync(producedCrx)) {
-    const crx = path.join(release, `way-mark-tag-chrome-${version}.crx`)
+    const crx = path.join(release, `waymarktag-chrome-${version}.crx`)
     fs.renameSync(producedCrx, crx)
     console.log('crx   ' + path.relative(root, crx))
 

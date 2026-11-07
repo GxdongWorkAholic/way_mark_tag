@@ -102,7 +102,7 @@ function onPmPointerCancel() {
 
 function exportData() {
   const payload = {
-    app: 'qingning-lite-start',
+    app: 'waymarktag-start',
     version: 3,
     exportedAt: new Date().toISOString(),
     theme: state.theme,
@@ -117,7 +117,7 @@ function exportData() {
     + String(now.getDate()).padStart(2, '0')
   const link = document.createElement('a')
   link.href = url
-  link.download = '起始页-备份-' + stamp + '.json'
+  link.download = 'WayMarkTag-备份-' + stamp + '.json'
   document.body.appendChild(link)
   link.click()
   link.remove()

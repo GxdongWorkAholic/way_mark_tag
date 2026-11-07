@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
-  "name": "起始页",
-  "short_name": "起始页",
+  "name": "WayMarkTag",
+  "short_name": "WayMarkTag",
   "version": "1.0.0",
   "description": "极简新标签页：时钟、多引擎搜索、可翻页的常用网站面板，数据只存本机。",
   "chrome_url_overrides": {

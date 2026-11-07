@@ -5,7 +5,7 @@ import { ui } from '../core/ui'
 
 <template>
   <header class="topbar">
-    <div class="brand"><span class="brand-dot" aria-hidden="true"></span>起始页</div>
+    <div class="brand"><span class="brand-dot" aria-hidden="true"></span>WayMarkTag</div>
     <div class="top-actions">
       <button type="button" class="icon-btn" id="themeToggle" aria-label="切换明暗主题" @click="toggleTheme">
         <svg class="od-icon icon-16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 0 0 16Z" fill="currentColor" stroke="none"/></svg>

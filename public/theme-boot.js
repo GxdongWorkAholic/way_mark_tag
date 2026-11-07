@@ -5,7 +5,7 @@
  * 真正的数据源仍是 chrome.storage.local，主程序加载后会再校正一次。
  */
 try {
-  var saved = JSON.parse(localStorage.getItem('qingning-lite-start.v1'));
+  var saved = JSON.parse(localStorage.getItem('waymarktag-start.v1'));
   if (saved && ['dark', 'light'].indexOf(saved.theme) >= 0) {
     document.documentElement.dataset.theme = saved.theme;
   }

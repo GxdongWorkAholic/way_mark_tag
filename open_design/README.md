@@ -1,6 +1,6 @@
-# 起始页 · 常用网站管理（新标签页原型）
+# WayMarkTag · 常用网站管理（新标签页原型）
 
-一个参考「青柠起始页」思路的极简新标签页：大号时钟 + 多引擎搜索 + 可翻页的常用网站面板，黑白双主题，无账号、无云同步，数据只存本机，支持 JSON 导出/导入。
+一个极简新标签页：大号时钟 + 多引擎搜索 + 可翻页的常用网站面板，黑白双主题，无账号、无云同步，数据只存本机，支持 JSON 导出/导入。
 
 当前是纯静态单文件页面（`index.html`），不是已打包的浏览器扩展。
 
@@ -54,17 +54,17 @@
 - 支持 `prefers-reduced-motion` 降级，键盘可达、焦点可见。
 
 ### 导入 / 导出
-- 设置 → 导出备份：下载 JSON 文件，文件名形如 `qingning-lite-start-<日期>.json`。
+- 设置 → 导出备份：下载 JSON 文件，文件名形如 `WayMarkTag-备份-<日期>.json`。
 - 设置 → 导入备份：读取 JSON 后校验、二次确认，成功则整体替换当前数据。
 - 数据同时写入 `localStorage`，刷新不丢。
 
 ## 导出数据结构
 
-`localStorage` 键：`qingning-lite-start.v1`
+`localStorage` 键：`waymarktag-start.v1`
 
 ```json
 {
-  "app": "qingning-lite-start",
+  "app": "waymarktag-start",
   "version": 3,
   "exportedAt": "2026-11-07T00:00:00.000Z",
   "theme": "light",

@@ -1,4 +1,4 @@
-# 起始页 · 新标签页扩展
+# WayMarkTag · 新标签页扩展
 
 把 `open_design/index.html` 那个单文件原型，做成了 **Chrome / Firefox 通用的 Manifest V3 扩展**，界面与功能保持与原型一致。
 
@@ -15,7 +15,7 @@
 ## 目录
 
 ```
-way_mark_tag/
+WayMarkTag/
 ├─ index.html                  Vite 入口（构建后成为扩展的新标签页）
 ├─ vite.config.js              按 --mode chrome|firefox 输出到不同目录
 ├─ manifests/
@@ -50,7 +50,7 @@ way_mark_tag/
 │  │  ├─ chrome/               Chrome 产物（直接加载这个目录）
 │  │  └─ firefox/              Firefox 产物
 │  └─ release/                 .zip / .crx / .xpi / .pem
-└─ open_design/                原始单文件原型（设计基准，未改动）
+└─ open_design/                原始单文件原型（设计基准）
 ```
 
 ## 构建与开发
@@ -76,10 +76,10 @@ npm run package         # 先构建两个产物，再打包
 
 | 文件 | 说明 |
 | --- | --- |
-| `way-mark-tag-chrome-<版本>.zip` | Chrome 产物压缩包，解压后「加载已解压的扩展程序」 |
-| `way-mark-tag-chrome-<版本>.crx` | Chrome 打包格式，由本机 Chrome 的 `--pack-extension` 生成 |
-| `way-mark-tag-firefox-<版本>.xpi` | Firefox 扩展包（XPI 就是 ZIP） |
-| `way-mark-tag.pem` | Chrome 打包私钥，**保留它**下次打包扩展 ID 才不变 |
+| `waymarktag-chrome-<版本>.zip` | Chrome 产物压缩包，解压后「加载已解压的扩展程序」 |
+| `waymarktag-chrome-<版本>.crx` | Chrome 打包格式，由本机 Chrome 的 `--pack-extension` 生成 |
+| `waymarktag-firefox-<版本>.xpi` | Firefox 扩展包（XPI 就是 ZIP） |
+| `waymarktag.pem` | Chrome 打包私钥，**保留它**下次打包扩展 ID 才不变 |
 
 两点现实限制：
 
@@ -106,7 +106,7 @@ npm run package         # 先构建两个产物，再打包
 
 ## 数据
 
-- 主存储：`chrome.storage.local`，键名沿用 `qingning-lite-start.v1`
+- 主存储：`chrome.storage.local`，键名 `waymarktag-start.v1`
 - 镜像：同一个 JSON 同步写一份到 `localStorage`，只为让 `theme-boot.js` 能在首屏渲染前**同步**读到主题（`chrome.storage` 是异步的，否则会闪白）
 - 首次启动时会自动从原型时期的 `localStorage` 数据迁移
 - 导出 / 导入仍是本地 JSON 文件，格式与原型完全一致

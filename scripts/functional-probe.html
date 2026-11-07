@@ -35,7 +35,7 @@ async function run() {
   const q = (sel) => D.querySelector(sel)
   const qa = (sel) => Array.from(D.querySelectorAll(sel))
   const labels = () => qa('.tile-label').map((el) => el.textContent.trim())
-  const stored = () => JSON.parse(W.localStorage.getItem('qingning-lite-start.v1') || 'null')
+  const stored = () => JSON.parse(W.localStorage.getItem('waymarktag-start.v1') || 'null')
 
   // 阻止打开新窗口干扰测试
   const opened = []
@@ -205,7 +205,7 @@ async function run() {
   /* 14. 扩展环境：清掉 localStorage 后重载，数据必须来自 chrome.storage.local */
   if (useExt) {
     const expected = { count: qa('.tile').length, labels: labels() }
-    try { W.localStorage.removeItem('qingning-lite-start.v1') } catch (e) {}
+    try { W.localStorage.removeItem('waymarktag-start.v1') } catch (e) {}
     await new Promise((resolve) => {
       frame.onload = resolve
       frame.contentWindow.location.reload()

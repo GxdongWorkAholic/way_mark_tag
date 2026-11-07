@@ -3,7 +3,7 @@
  * 与原型 open_design/index.html 完全一致，只是从 IIFE 里拆成了 ES Module。
  */
 
-export const STORE_KEY = 'qingning-lite-start.v1'
+export const STORE_KEY = 'waymarktag-start.v1'
 export const THEMES = ['light', 'dark']
 
 export const ENGINES = [
