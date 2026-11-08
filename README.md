@@ -84,7 +84,8 @@ npm run package         # 先构建两个产物，再打包
 两点现实限制：
 
 - **.crx 不能直接装**：现代 Chrome 只允许从商店安装，拖拽 off-store 的 CRX 会被拒绝（企业策略或 Linux 开发者模式除外）。日常还是用「加载已解压的扩展程序」；CRX 主要用于分发存档、上架素材。
-- **.xpi 未签名**：正式版 Firefox 会拒绝安装未签名扩展，只有 Developer Edition / Nightly（或 `about:config` 里 `xpinstall.signatures.required=false`）能装。要正式分发得走 `web-ext sign`（需要 AMO 账号）。
+- **.xpi 未签名**：正式版 Firefox 会拒绝安装未签名扩展，只有 Developer Edition / Nightly（或 `about:config` 里 `xpinstall.signatures.required=false`）能装。要正式分发得走 `web-ext sign` 或上架 AMO（需要 AMO 账号）。
+- **数据声明**：`manifests/manifest.firefox.json` 里已按 AMO 要求声明 `browser_specific_settings.gecko.data_collection_permissions.required = ["none"]`（扩展不收集、不传输任何数据），`strict_min_version` 为 140（该声明只有 Firefox 140+ 认识）。
 
 ## 加载到浏览器
 
