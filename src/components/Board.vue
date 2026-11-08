@@ -51,6 +51,86 @@ const pageIndex = computed(() => state.pages.findIndex((page) => page.id === nav
 const prevDisabled = computed(() => pageIndex.value <= 0)
 const nextDisabled = computed(() => pageIndex.value < 0 || pageIndex.value >= state.pages.length - 1)
 
+/* ---------- 滚动（两行视窗，每次滚动一行） ---------- */
+
+// 视窗高度固定为两行，滚动按整行步进
+const scrollState = reactive({ overflow: false, atTop: true, atBottom: false })
+
+const touchScroll = { active: false, startTop: 0, startY: 0 }
+
+let wheelAcc = 0
+let wheelLockedUntil = 0
+let wheelResetTimer = 0
+
+function maxScroll() {
+  const vp = viewportEl.value
+  return vp ? Math.max(0, vp.scrollHeight - vp.clientHeight) : 0
+}
+
+function rowStep() {
+  const grid = gridEl.value
+  if (!grid) return 0
+  const style = window.getComputedStyle(grid)
+  const row = parseFloat(style.gridAutoRows) || 0
+  const gap = parseFloat(style.rowGap) || 0
+  return row + gap
+}
+
+function refreshScrollState() {
+  const vp = viewportEl.value
+  if (!vp) return
+  const max = maxScroll()
+  scrollState.overflow = max > 1
+  scrollState.atTop = vp.scrollTop <= 1
+  scrollState.atBottom = vp.scrollTop >= max - 1
+}
+
+function scrollByRow(dir) {
+  const vp = viewportEl.value
+  const step = rowStep()
+  if (!vp || step <= 0) return false
+  const max = maxScroll()
+  if (max <= 1) return false
+
+  const current = Math.round(vp.scrollTop / step)
+  const lastRow = Math.round(max / step)
+  const target = Math.max(0, Math.min(lastRow, current + dir))
+  if (target === current && Math.abs(vp.scrollTop - target * step) < 1) return false
+
+  vp.scrollTo({ top: target * step, behavior: 'smooth' })
+  return true
+}
+
+function scrollToTop() {
+  const vp = viewportEl.value
+  if (vp) vp.scrollTop = 0
+  refreshScrollState()
+}
+
+// 触屏拖动时可视跟随，松手吸附到相邻一行（一次最多一行）
+function updateTouchScroll(event) {
+  const vp = viewportEl.value
+  const step = rowStep()
+  if (!vp || step <= 0) return
+  const raw = touchScroll.startTop - (event.clientY - touchScroll.startY)
+  const low = Math.max(0, touchScroll.startTop - step)
+  const high = Math.min(maxScroll(), touchScroll.startTop + step)
+  vp.scrollTop = Math.max(low, Math.min(high, raw))
+}
+
+function finishTouchScroll() {
+  const vp = viewportEl.value
+  const step = rowStep()
+  if (!vp || step <= 0) return
+  const movedBy = vp.scrollTop - touchScroll.startTop
+  const fromRow = Math.round(touchScroll.startTop / step)
+  const lastRow = Math.round(maxScroll() / step)
+  let targetRow = fromRow
+  if (Math.abs(movedBy) > step * 0.25) targetRow += movedBy > 0 ? 1 : -1
+  targetRow = Math.max(0, Math.min(lastRow, targetRow))
+  vp.scrollTo({ top: targetRow * step, behavior: 'smooth' })
+}
+
 /* ---------- 拖拽（图块） ---------- */
 
 const dragVisual = reactive({ active: false, nodeId: null, dropInto: null })
@@ -62,6 +142,7 @@ const drag = {
   pointerId: null,
   pointerType: 'mouse',
   nodeId: null,
+  fromViewport: false,
   startX: 0,
   startY: 0,
   moved: false,
@@ -238,10 +319,12 @@ function resetDrag() {
   removeGhost()
   document.body.classList.remove('is-dragging')
   clearDropVisual()
+  touchScroll.active = false
   dragVisual.active = false
   dragVisual.nodeId = null
   drag.pointerId = null
   drag.nodeId = null
+  drag.fromViewport = false
   drag.active = false
   drag.moved = false
   drag.orderSnapshot = null
@@ -255,6 +338,7 @@ function onPointerDown(event) {
   drag.nodeId = tile ? tile.dataset.nodeId : null
   drag.pointerId = event.pointerId
   drag.pointerType = event.pointerType || 'mouse'
+  drag.fromViewport = !!(viewportEl.value && viewportEl.value.contains(event.target))
   drag.startX = event.clientX
   drag.startY = event.clientY
   drag.active = false
@@ -262,6 +346,7 @@ function onPointerDown(event) {
   drag.dropType = null
   drag.dropId = null
   drag.orderSnapshot = currentItems.value.map((node) => node.id)
+  touchScroll.active = false
 
   dragVisual.active = false
   dragVisual.nodeId = null
@@ -291,6 +376,23 @@ function onPointerMove(event) {
   }
   if (!drag.moved) return
 
+  // 触屏：常用网站区域上下滑动 = 逐行滚动（一次最多一行）
+  if (drag.pointerType === 'touch' && drag.fromViewport) {
+    if (!touchScroll.active
+      && Math.abs(dy) > 10
+      && Math.abs(dy) > Math.abs(dx) * 1.2
+      && maxScroll() > 1) {
+      touchScroll.active = true
+      touchScroll.startTop = viewportEl.value.scrollTop
+      touchScroll.startY = drag.startY
+    }
+    if (touchScroll.active) {
+      if (event.cancelable) event.preventDefault()
+      updateTouchScroll(event)
+      return
+    }
+  }
+
   if (drag.nodeId && drag.pointerType !== 'touch') {
     if (!drag.active) {
       drag.active = true
@@ -311,6 +413,14 @@ function onPointerMove(event) {
 function onPointerUp(event) {
   if (drag.pointerId === null || event.pointerId !== drag.pointerId) return
   window.clearTimeout(longPressTimer)
+
+  if (touchScroll.active) {
+    touchScroll.active = false
+    finishTouchScroll()
+    suppressNextClick()
+    resetDrag()
+    return
+  }
 
   const wasActive = drag.active
   const moved = drag.moved
@@ -428,11 +538,34 @@ function onGridClick(event) {
 }
 
 function onWheel(event) {
-  if (!event.shiftKey) return
-  event.preventDefault()
-  const delta = event.deltaY !== 0 ? event.deltaY : event.deltaX
+  if (event.shiftKey) {
+    event.preventDefault()
+    const delta = event.deltaY !== 0 ? event.deltaY : event.deltaX
+    if (!delta) return
+    goPage(delta > 0 ? 1 : -1)
+    return
+  }
+
+  if (maxScroll() <= 1) return
+  const delta = event.deltaY
   if (!delta) return
-  goPage(delta > 0 ? 1 : -1)
+  event.preventDefault()
+
+  const now = performance.now()
+  if (now < wheelLockedUntil) return
+
+  // Firefox 的滚轮按行给 delta（deltaMode=1），统一折算成像素
+  const unit = event.deltaMode === 1 ? 40 : (event.deltaMode === 2 ? Math.max(1, rowStep()) : 1)
+
+  // 触控板会把一次滑动拆成许多小事件，攒够阈值再移动一行
+  wheelAcc += delta * unit
+  window.clearTimeout(wheelResetTimer)
+  wheelResetTimer = window.setTimeout(() => { wheelAcc = 0 }, 240)
+  if (Math.abs(wheelAcc) < 30) return
+
+  const dir = wheelAcc > 0 ? 1 : -1
+  wheelAcc = 0
+  if (scrollByRow(dir)) wheelLockedUntil = now + 260
 }
 
 function onContextMenu(event) {
@@ -468,10 +601,21 @@ function goCrumb(index) {
 
 watch(() => nav.pageId, async () => {
   await nextTick()
+  scrollToTop()
   const active = tabsEl.value && tabsEl.value.querySelector('[aria-selected="true"]')
   if (active) {
     try { active.scrollIntoView({ block: 'nearest', inline: 'nearest' }) } catch (e) { /* 忽略 */ }
   }
+})
+
+watch(() => nav.path.join('/'), async () => {
+  await nextTick()
+  scrollToTop()
+})
+
+watch(() => currentItems.value.length, async () => {
+  await nextTick()
+  refreshScrollState()
 })
 
 watch(() => ui.focusNodeId, async (id) => {
@@ -486,6 +630,10 @@ watch(() => ui.focusNodeId, async (id) => {
   ui.focusNodeId = null
 })
 
+function onWindowResize() {
+  refreshScrollState()
+}
+
 onMounted(() => {
   window.addEventListener('pointermove', onPointerMove, { passive: false })
   window.addEventListener('pointerup', onPointerUp)
@@ -493,8 +641,10 @@ onMounted(() => {
   window.addEventListener('pointermove', onTabPointerMove, { passive: false })
   window.addEventListener('pointerup', onTabPointerUp)
   window.addEventListener('pointercancel', onTabPointerCancel)
+  window.addEventListener('resize', onWindowResize)
   if (viewportEl.value) viewportEl.value.addEventListener('wheel', onWheel, { passive: false })
   if (tabsEl.value) tabsEl.value.addEventListener('pointerdown', onTabPointerDown)
+  nextTick(refreshScrollState)
 })
 
 onBeforeUnmount(() => {
@@ -504,8 +654,10 @@ onBeforeUnmount(() => {
   window.removeEventListener('pointermove', onTabPointerMove)
   window.removeEventListener('pointerup', onTabPointerUp)
   window.removeEventListener('pointercancel', onTabPointerCancel)
+  window.removeEventListener('resize', onWindowResize)
   if (viewportEl.value) viewportEl.value.removeEventListener('wheel', onWheel)
   if (tabsEl.value) tabsEl.value.removeEventListener('pointerdown', onTabPointerDown)
+  window.clearTimeout(wheelResetTimer)
   removeGhost()
 })
 </script>
@@ -557,12 +709,14 @@ onBeforeUnmount(() => {
       </nav>
       <div
         class="board-viewport"
+        :class="{ 'fade-top': scrollState.overflow && !scrollState.atTop, 'fade-bottom': scrollState.overflow && !scrollState.atBottom }"
         id="boardViewport"
         role="tabpanel"
         :aria-label="viewportLabel"
         ref="viewportEl"
         @pointerdown="onPointerDown"
         @click="onGridClick"
+        @scroll="refreshScrollState"
       >
         <ul class="tile-grid" id="tileGrid" ref="gridEl" v-show="currentItems.length > 0">
           <TileItem
