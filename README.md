@@ -20,7 +20,7 @@ WayMarkTag/
 ├─ vite.config.js              按 --mode chrome|firefox 输出到不同目录
 ├─ manifests/
 │  ├─ manifest.chrome.json     Chrome 版 manifest
-│  └─ manifest.firefox.json    Firefox 版（多了 browser_specific_settings.gecko）
+│  └─ manifest.firefox.json    Firefox 版（多了 browser_specific_settings.gecko 和主页覆盖）
 ├─ public/
 │  ├─ theme-boot.js            首屏主题预热（必须同步、独立文件，MV3 禁内联脚本）
 │  └─ icons/                   16/32/48/128 图标
@@ -86,6 +86,7 @@ npm run package         # 先构建两个产物，再打包
 - **.crx 不能直接装**：现代 Chrome 只允许从商店安装，拖拽 off-store 的 CRX 会被拒绝（企业策略或 Linux 开发者模式除外）。日常还是用「加载已解压的扩展程序」；CRX 主要用于分发存档、上架素材。
 - **.xpi 未签名**：正式版 Firefox 会拒绝安装未签名扩展，只有 Developer Edition / Nightly（或 `about:config` 里 `xpinstall.signatures.required=false`）能装。要正式分发得走 `web-ext sign` 或上架 AMO（需要 AMO 账号）。
 - **数据声明**：`manifests/manifest.firefox.json` 里已按 AMO 要求声明 `browser_specific_settings.gecko.data_collection_permissions.required = ["none"]`（扩展不收集、不传输任何数据），`strict_min_version` 为 140（该声明只有 Firefox 140+ 认识）。
+- **主页覆盖**：Firefox 版额外声明了 `chrome_settings_overrides.homepage`，安装后「设置 → 主页」里的「主页和新窗口」「新标签页」下拉都会出现本插件（Firefox 152+）。Firefox 会把主页一并指向扩展页面（可在设置里改回）；Chrome 版不声明该键，避免改动 Chrome 的主页设置。
 
 ## 加载到浏览器
 
@@ -100,10 +101,15 @@ npm run package         # 先构建两个产物，再打包
 
 1. `about:debugging#/runtime/this-firefox`
 2. 「临时载入附加组件」→ 选择 `output/dist/firefox/manifest.json`
-3. 新开标签页生效
+3. 新开标签页生效；Firefox 152+ 的「设置 → 主页」里的「主页和新窗口」「新标签页」下拉也会出现 WayMarkTag
 
 > 开发时保持 `npm run dev` 运行，改完代码在扩展管理页点一次「重新加载」（Firefox 在 about:debugging 点「重新载入」）即可。
 > Firefox 的临时附加组件在浏览器重启后会消失，重新载入一次即可；正式长期使用需打包签名。
+
+### Firefox 主页下拉里看不到本插件
+
+- 「新标签页」下拉由 `chrome_url_overrides.newtab` 驱动，「主页和新窗口」下拉由 `chrome_settings_overrides.homepage` 驱动，两个键在 Firefox 里是分开的；本扩展两个都已声明（见 `manifests/manifest.firefox.json`）。
+- 如果仍看不到：Firefox 152 之前的版本在启用新版设置页时存在 Mozilla bug（[Bug 2026324](https://bugzilla.mozilla.org/show_bug.cgi?id=2026324)），下拉不会列出扩展，但扩展本身仍在接管新标签页；升级 Firefox 即可。
 
 ## 数据
 
@@ -159,3 +165,4 @@ npm run package         # 先构建两个产物，再打包
 - 图标仍是名称首字母色块，未支持真实 favicon（后续可用 `chrome-extension://<id>/_favicon/?pageUrl=…`，需 `favicon` 权限）
 - 数据仅存本机，换设备需导出/导入
 - 未做打包签名，Firefox 正式安装需要 `web-ext sign` 或上架 AMO
+- Firefox 版声明了主页覆盖，安装时 Firefox 会把主页指向扩展页面（可在「设置 → 主页」改回）

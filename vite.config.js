@@ -10,7 +10,7 @@ const outDirOf = (browser) => path.join('output', 'dist', browser)
 
 /**
  * 把对应浏览器的 manifest 拷进构建产物根目录。
- * Chrome 与 Firefox 的差异只有 browser_specific_settings，其余完全共用。
+ * Chrome 与 Firefox 的差异只有 browser_specific_settings 和主页覆盖，其余完全共用。
  */
 function manifestPlugin(browser) {
   return {
